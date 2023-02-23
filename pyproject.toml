@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "tlc club market bot"
+version = "0.0.1-alpha"
+description = "TLC Market place for terlegram chat"
+authors = ["Dedoque"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+aiogram = "^2.25.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
