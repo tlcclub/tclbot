@@ -1,4 +1,6 @@
-import logging  
+import logging
+import pathlib
+from typing import List
 import json
 import aiogram.utils.markdown as md
 from aiogram import Bot, Dispatcher, types
@@ -7,7 +9,7 @@ from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
-from bot.keyboards.keyboards import  (
+from bot.keyboards.keyboards import (
     BTN_PLACE_SELL,
     BTN_PALCE_BUY,
     BTN_DONE,
@@ -17,18 +19,19 @@ from bot.keyboards.keyboards import  (
     DONE
 )
 from bot.messages.messages import Messages
-import config
+from config import init_config
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
+formatter = logging.Formatter('%(asctime)s %(name)s-[%(funcName)s:%(lineno)s] %(levelname)s %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
 log = logger
 
-bot = Bot(token=config.BOT_API_TOKEN)
+config = init_config()
+bot = Bot(token=config.bot.token)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
@@ -103,25 +106,22 @@ async def do_description(message: types.Message, state: FSMContext):
     await message.reply("Введите картинки")
 
 
-@dp.message_handler(content_types=[types.message.ContentType.PHOTO], state=Form)
-async def do_photo(message: types.Message, state: FSMContext):
+@dp.message_handler(content_types=types.message.ContentType.PHOTO, state=Form.photo)
+async def do_photo(message: types.Message, album: List[types.Message], state: FSMContext):
     log.info(f"DO_PHOTO {message}")
-    await state.update_data(photo=[message.photo[-1]], photo_counter=1)
-    await state.set_state('next_photo')
-    await Form.next()
-    await message.answer(text="C Фото всё?", reply_markup=DONE)
-
-@dp.message_handler(state='next_photo', content_types=[types.message.ContentType.PHOTO])
-async def next_photo_handler(message: types.Message, state:FSMContext):
-    # we are here if the second and next messages are photos
     async with state.proxy() as data:
-        data['photo_counter'] += 1
-        photo_counter = data['photo_counter']
-        data.get('photo').append(message.photo[-1])
+        data['photo'] = list()
+        for obj in album:
+            if obj.photo:
+                photo = obj.photo[-1]
+                log.info(photo)
+                await photo.download(destination_dir=f"{message.from_user.id}")
+                file = await bot.get_file(photo.file_id)
+                log.info(file.file_path)
+                data['photo'].append(file.file_path)
         log.info(data)
-    await state.set_state('next_photo')
-    await Form.next()
-    await message.answer(text="C Фото всё?", reply_markup=DONE)
+        await message.answer(text="Ежели с картиками закончили",
+                             reply_markup=DONE)
 
 
 @dp.callback_query_handler(text='done', state=Form)
@@ -146,31 +146,28 @@ async def do_price(message: types.Message, state: FSMContext):
 
         markup = types.ReplyKeyboardRemove()
         caption = md.text(
-            md.text(md.bold(f"{data.get('title')} - {data.get('price')}₱")),
+            md.text(md.bold(f"Наименование: {data.get('title')}"), md.text(f"за {md.bold(data.get('price'))}₱")),
+            md.text(f"{md.bold('Описание')}:"),
             md.text(data.get('description')),
-            md.text(message.from_user.username),
+            md.text(f"{md.bold('Локация')}"),
+            md.text(f"Прдавец: {md.link(f'{message.from_user.username}', f'tg://user?id={message.from_user.id}')}"),
+            md.code('Никогда никому не переводите деньги без гарантий'),
             sep="\n"
-        ),
+        )
         media_group = types.MediaGroup()
-        for p in data.get('photo'):
-            await p.download()
-            file = await bot.get_file(p.file_id)
+        for file in data.get('photo'):
             log.info(file)
-            media_group.attach_photo(types.InputMediaPhoto(
-                                     file.file_path,
-                                     cation=caption,
-                                     parse_mode=types.ParseMode.MARKDOWN
-                ))
+            if len(media_group.media) == 1:
+                attachment = types.InputMediaPhoto(open(pathlib.Path(f"{message.from_user.id}/{file}"), 'rb'),
+                                                   caption=caption,
+                                                   parse_mode=types.ParseMode.MARKDOWN,
+                                                   caption_entities=message.caption_entities
+                )
+                media_group.attach_photo(attachment)
+            else:
+                media_group.attach_photo(types.InputMediaPhoto(open(pathlib.Path(f"{message.from_user.id}/{file}"), 'rb')))
 
-
-        # And send message
-        await message.reply_media_group(media_group)
+        await message.reply_media_group(media_group, allow_sending_without_reply=True)
+        # TODO:
+        #  await utils.delete(f"{message.from_user.id}/{file}")
     await state.finish()
-
-# @dp.callback_query_handler(text='buy')
-# async def process_callback_wind(callback_query: types.CallbackQuery):
-#     await bot.answer_callback_query(callback_query.id)
-#     await bot.send_message(
-#         callback_query.from_user.id,
-#         text=msg.buy(callback_query.from_user),
-#     )
