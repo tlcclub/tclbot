@@ -53,8 +53,9 @@ msg = Messages()
 async def do_start(message: types.Message):
     await Form.mtype.set()
     await Form.userid.set()
-    await message.answer(text=f'Этот бот поможет Вам правильно оформить объявление для Барахолки TLC',
-                         reply_markup=HELP)
+    await message.answer(
+        text=f'Этот бот поможет Вам правильно оформить объявление для Барахолки TLC',
+        reply_markup=HELP)
 
 
 @dp.callback_query_handler(text='sell', state=Form)
@@ -122,8 +123,8 @@ async def do_photo(message: types.Message, album: List[types.Message], state: FS
                 log.info(file.file_path)
                 data['photo'].append(file.file_path)
         log.info(data)
-        await message.answer(text="Ежели с картиками закончили",
-                             reply_markup=DONE)
+    await message.answer(text="Ежели с картиками закончили",
+                         reply_markup=DONE)
 
 
 @dp.callback_query_handler(text='done', state=Form)
@@ -168,9 +169,20 @@ async def do_price(message: types.Message, state: FSMContext):
                 media_group.attach_photo(attachment)
                 c = +1
             else:
-                media_group.attach_photo(types.InputMediaPhoto(open(pathlib.Path(f"{message.from_user.id}/{file}"), 'rb')))
+                media_group.attach_photo(
+                    types.InputMediaPhoto(
+                        open(
+                            pathlib.Path(f"{message.from_user.id}/{file}"), 'rb')
+                    )
+                )
 
         await message.reply_media_group(media_group, allow_sending_without_reply=True)
+        await bot.send_media_group(
+            chat_id=config.bot.admin_id,
+            media=media_group,
+            allow_sending_without_reply=True,
+        )
         # TODO:
         #  await utils.delete(f"{message.from_user.id}/{file}")
+
     await state.finish()

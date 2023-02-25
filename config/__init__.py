@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 @dataclass
 class Bot:
     token: str
+    trade_chat_id: int
+    admin_id: int
 
 
 @dataclass
@@ -64,9 +66,9 @@ def load_envs(config: Config) -> Config:
         sys.exit("Error while setting config")
 
     if 'TLC_DATABASE' in envs.keys():
-        db = dict([(k.lower().split('_')[2:][0], v) for k, v in envs.items() if k.lower().startswith('tlc_database')])
+        db = dict([("_".join(k.lower().split('_')[2:]), v) for k, v in envs.items() if k.lower().startswith('tlc_database')])
         setattr(config, 'db', mapping.get('db')(**db))
-    bot = dict([(k.lower().split('_')[2:][0], v) for k, v in envs.items() if k.lower().startswith('tlc_bot')])
+    bot = dict([("_".join(k.lower().split('_')[2:]), v) for k, v in envs.items() if k.lower().startswith('tlc_bot')])
     setattr(config, 'bot', mapping.get('bot')(**bot))
 
     return config

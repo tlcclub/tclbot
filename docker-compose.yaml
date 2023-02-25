@@ -1,0 +1,15 @@
+version: "3.9"
+
+networks:
+  tlcbot:
+
+services:
+  bot:
+    image: tlcbot
+    networks:
+      - tlcbot
+    volumes:
+      - ./:/tlcbot
+    command:
+      - python
+      - run.py
