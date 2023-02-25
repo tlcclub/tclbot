@@ -21,6 +21,8 @@ class AlbumMiddleware(BaseMiddleware):
 
     async def on_process_message(self, message: types.Message, data: dict):
         if not message.media_group_id:
+            message.conf["is_last"] = True
+            data['album'] = [message]
             return
 
         try:

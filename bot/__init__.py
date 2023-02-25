@@ -106,9 +106,11 @@ async def do_description(message: types.Message, state: FSMContext):
     await message.reply("Введите картинки")
 
 
-@dp.message_handler(content_types=types.message.ContentType.PHOTO, state=Form.photo)
+@dp.message_handler(content_types=[types.message.ContentType.PHOTO], state=Form.photo)
 async def do_photo(message: types.Message, album: List[types.Message], state: FSMContext):
     log.info(f"DO_PHOTO {message}")
+    log.info(f"DO_PHOTO {album}")
+
     async with state.proxy() as data:
         data['photo'] = list()
         for obj in album:
@@ -144,7 +146,6 @@ async def do_price(message: types.Message, state: FSMContext):
         log.info(data)
         await types.ChatActions.upload_photo()
 
-        markup = types.ReplyKeyboardRemove()
         caption = md.text(
             md.text(md.bold(f"Наименование: {data.get('title')}"), md.text(f"за {md.bold(data.get('price'))}₱")),
             md.text(f"{md.bold('Описание')}:"),
@@ -155,15 +156,17 @@ async def do_price(message: types.Message, state: FSMContext):
             sep="\n"
         )
         media_group = types.MediaGroup()
+        c = 0
         for file in data.get('photo'):
             log.info(file)
-            if len(media_group.media) == 1:
+            if c == 0:
                 attachment = types.InputMediaPhoto(open(pathlib.Path(f"{message.from_user.id}/{file}"), 'rb'),
                                                    caption=caption,
                                                    parse_mode=types.ParseMode.MARKDOWN,
                                                    caption_entities=message.caption_entities
                 )
                 media_group.attach_photo(attachment)
+                c = +1
             else:
                 media_group.attach_photo(types.InputMediaPhoto(open(pathlib.Path(f"{message.from_user.id}/{file}"), 'rb')))
 
