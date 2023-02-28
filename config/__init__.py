@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import configparser
-import logging
 import os
 import pathlib
 import sys
@@ -55,20 +54,30 @@ mapping = dict(
 
 
 def load_envs(config: Config) -> Config:
-    print(os.getenv('TLC_BOT_TOKEN'))
     load_dotenv()
-    envs = dict([(k, v) for k, v in os.environ.items() if k.lower().startswith(f"tlc")])
+
+    envs = dict([
+      (k, v) for k, v in os.environ.items() if k.lower().startswith("tlc")])
+    print(61, envs)
     try:
         print(os.getenv('TLC_BOT_TOKEN'))
+        print(os.getenv('TLC_BOT_ADMIN_ID'))
+
         if len(envs) == 0:
             raise KeyError
     except KeyError:
         sys.exit("Error while setting config")
 
     if 'TLC_DATABASE' in envs.keys():
-        db = dict([("_".join(k.lower().split('_')[2:]), v) for k, v in envs.items() if k.lower().startswith('tlc_database')])
+        db = dict([
+          ("_".join(k.lower().split('_')[2:]), v)
+          for k, v in envs.items() if k.lower().startswith('tlc_database')])
         setattr(config, 'db', mapping.get('db')(**db))
-    bot = dict([("_".join(k.lower().split('_')[2:]), v) for k, v in envs.items() if k.lower().startswith('tlc_bot')])
+    bot = dict([
+      ("_".join(k.lower().split('_')[2:]), v)
+      for k, v in envs.items() if k.lower().startswith('tlc_bot')])
+    print(bot)
+
     setattr(config, 'bot', mapping.get('bot')(**bot))
 
     return config

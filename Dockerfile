@@ -1,8 +1,5 @@
 FROM python:3.11 AS build
 
-ARG TLC_BOT_TOKEN
-ENV TLC_BOT_TOKEN=$TLC_BOT_TOKEN
-
 WORKDIR tlcbot
 ADD poetry.lock /tlcbot/
 ADD pyproject.toml /tlcbot/

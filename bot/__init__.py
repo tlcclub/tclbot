@@ -1,7 +1,6 @@
 import logging
 import pathlib
 from typing import List
-import json
 import aiogram.utils.markdown as md
 from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher import FSMContext
@@ -11,7 +10,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 from bot.keyboards.keyboards import (
     BTN_PLACE_SELL,
-    BTN_PALCE_BUY,
+    BTN_PLACE_BUY,
     BTN_DONE,
     SELL,
     BUY,
@@ -23,7 +22,8 @@ from config import init_config
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s %(name)s-[%(funcName)s:%(lineno)s] %(levelname)s %(message)s')
+formatter = logging.Formatter(('%(asctime)s %(name)s-[%(funcName)s:%(lineno)s]'
+                               '%(levelname)s %(message)s'))
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
@@ -54,25 +54,29 @@ async def do_start(message: types.Message):
     await Form.mtype.set()
     await Form.userid.set()
     await message.answer(
-        text=f'Этот бот поможет Вам правильно оформить объявление для Барахолки TLC',
+        text=('Этот бот поможет Вам правильно оформить '
+              'объявление для Барахолки TLC'),
         reply_markup=HELP)
 
 
 @dp.callback_query_handler(text='sell', state=Form)
-async def do_callback_sell(callback_query: types.CallbackQuery, state: FSMContext):
+async def do_callback_sell(callback_query: types.CallbackQuery,
+                           state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     await state.update_data(mtype='sell', userid=callback_query.from_user.id)
+    await Form.next()
+
     await bot.send_message(
         callback_query.from_user.id,
         text=msg.sell(callback_query.from_user),
     )
-    await Form.next()
     await bot.send_message(callback_query.from_user.id,
                            text="Введите название товара")
 
 
 @dp.message_handler(state='*', commands='cancel')
-@dp.message_handler(Text(equals=['cancel', 'отмена'], ignore_case=True), state='*')
+@dp.message_handler(Text(equals=['cancel', 'отмена'],
+                         ignore_case=True), state='*')
 async def cancel_handler(message: types.Message, state: FSMContext):
     """
     Allow user to cancel any action
@@ -107,8 +111,10 @@ async def do_description(message: types.Message, state: FSMContext):
     await message.reply("Введите картинки")
 
 
-@dp.message_handler(content_types=[types.message.ContentType.PHOTO], state=Form.photo)
-async def do_photo(message: types.Message, album: List[types.Message], state: FSMContext):
+@dp.message_handler(content_types=[types.message.ContentType.PHOTO],
+                    state=Form.photo)
+async def do_photo(message: types.Message,
+                   album: List[types.Message], state: FSMContext):
     log.info(f"DO_PHOTO {message}")
     log.info(f"DO_PHOTO {album}")
 
@@ -128,7 +134,8 @@ async def do_photo(message: types.Message, album: List[types.Message], state: FS
 
 
 @dp.callback_query_handler(text='done', state=Form)
-async def do_callback_photo_done(callback_query: types.CallbackQuery, state: FSMContext):
+async def do_callback_photo_done(callback_query: types.CallbackQuery,
+                                 state: FSMContext):
     async with state.proxy() as data:
         log.info(f" QUERY PHOTO DONE {data}")
     await Form.next()
@@ -146,13 +153,15 @@ async def do_price(message: types.Message, state: FSMContext):
         data['price'] = message.text
         log.info(data)
         await types.ChatActions.upload_photo()
-
+        link = md.link(f'{message.from_user.username}',
+                       f'tg://user?id={message.from_user.id}')
         caption = md.text(
-            md.text(md.bold(f"Наименование: {data.get('title')}"), md.text(f"за {md.bold(data.get('price'))}₱")),
+            md.text(md.bold(f"Наименование: {data.get('title')}"),
+                    md.text(f"за {md.bold(data.get('price'))}₱")),
             md.text(f"{md.bold('Описание')}:"),
             md.text(data.get('description')),
             md.text(f"{md.bold('Локация')}"),
-            md.text(f"Прдавец: {md.link(f'{message.from_user.username}', f'tg://user?id={message.from_user.id}')}"),
+            md.text(f"Прдавец: {link}"),
             md.code('Никогда никому не переводите деньги без гарантий'),
             sep="\n"
         )
@@ -161,22 +170,24 @@ async def do_price(message: types.Message, state: FSMContext):
         for file in data.get('photo'):
             log.info(file)
             if c == 0:
-                attachment = types.InputMediaPhoto(open(pathlib.Path(f"{message.from_user.id}/{file}"), 'rb'),
-                                                   caption=caption,
-                                                   parse_mode=types.ParseMode.MARKDOWN,
-                                                   caption_entities=message.caption_entities
-                )
+                attachment = types.InputMediaPhoto(open(
+                  pathlib.Path(f"{message.from_user.id}/{file}"), 'rb'),
+                  caption=caption,
+                  parse_mode=types.ParseMode.MARKDOWN,
+                  caption_entities=message.caption_entities)
                 media_group.attach_photo(attachment)
                 c = +1
             else:
                 media_group.attach_photo(
                     types.InputMediaPhoto(
                         open(
-                            pathlib.Path(f"{message.from_user.id}/{file}"), 'rb')
+                            pathlib.Path(
+                              f"{message.from_user.id}/{file}"), 'rb')
                     )
                 )
 
-        await message.reply_media_group(media_group, allow_sending_without_reply=True)
+        await message.reply_media_group(media_group,
+                                        allow_sending_without_reply=True)
         await bot.send_media_group(
             chat_id=config.bot.admin_id,
             media=media_group,
