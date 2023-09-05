@@ -24,14 +24,12 @@ class AlbumMiddleware(BaseMiddleware):
             message.conf["is_last"] = True
             data['album'] = [message]
             return
-
         try:
             self.album_data[message.media_group_id].append(message)
             raise CancelHandler()  # Tell aiogram to cancel handler for this group element
         except KeyError:
             self.album_data[message.media_group_id] = [message]
             await asyncio.sleep(self.latency)
-
             message.conf["is_last"] = True
             data["album"] = self.album_data[message.media_group_id]
 

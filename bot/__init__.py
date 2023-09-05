@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import sys
 from typing import List
 import aiogram.utils.markdown as md
 from aiogram import Bot, Dispatcher, types
@@ -7,7 +8,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-
+from aiogram.utils.exceptions import ValidationError
 from bot.keyboards.keyboards import (
     BTN_PLACE_SELL,
     BTN_PLACE_BUY,
@@ -31,7 +32,20 @@ logger.setLevel(logging.DEBUG)
 log = logger
 
 config = init_config()
-bot = Bot(token=config.bot.token)
+
+class BotInit:
+    @property
+    def botClient(self):
+        try:
+            bot = Bot(token=config.bot.token)
+            return bot
+        except ValidationError as err:
+            log.error(f"{err}")
+            sys.exit(1)
+        
+
+
+bot = BotInit().botClient
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 

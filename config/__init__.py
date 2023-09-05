@@ -60,9 +60,6 @@ def load_envs(config: Config) -> Config:
       (k, v) for k, v in os.environ.items() if k.lower().startswith("tlc")])
     print(61, envs)
     try:
-        print(os.getenv('TLC_BOT_TOKEN'))
-        print(os.getenv('TLC_BOT_ADMIN_ID'))
-
         if len(envs) == 0:
             raise KeyError
     except KeyError:
